@@ -1,4 +1,4 @@
-const { desktopCapturer, remote } = require('electron');
+const { desktopCapturer, remote, ipcRenderer } = require('electron');
 
 const { writeFile } = require('fs');
 
@@ -6,7 +6,7 @@ const { dialog, Menu } = remote;
 
 // const {shell} = require('electron') // deconstructing assignment
 // shell.showItemInFolder('filepath') // Show the given file in a file manager. If possible, select the file.
-// shell.openPath('folderpath') // Open the given file in the desktop's default manner.
+// shell.openPath('folderpath') // pen the given file in the desktop's default manner.
 // global state
 let mediaRecorder; // mediarecorder instance to capture footage
 const recordedChunks = [];
@@ -19,7 +19,7 @@ const {
   maxUnmaxWindow,
   isWindowMaximized,
   closeWindow,
-} = require("./menu-functions");
+} = require("./menu/menu-functions");
 
 window.addEventListener("DOMContentLoaded", () => {
   window.getCurrentWindow = getCurrentWindow;
@@ -30,6 +30,7 @@ window.addEventListener("DOMContentLoaded", () => {
   window.isWindowMaximized = isWindowMaximized;
   window.closeWindow = closeWindow;
 });
+
 
 window.addEventListener("DOMContentLoaded", () => {
   const menuButton = document.getElementById("menu-btn");
@@ -60,6 +61,7 @@ window.addEventListener("DOMContentLoaded", () => {
       icon.classList.remove("fa-clone");
     }
   });
+
 
   closeButton.addEventListener("click", e => {
     window.closeWindow();
