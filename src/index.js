@@ -24,7 +24,7 @@ const createWindow = () => {
     icon: 'src/img/icon.ico',
     webPreferences: {
       nodeIntegration: true, // if true, gets you the 'require is not defined' error
-      devTools: false, // removes devtools bar
+      devTools: true, // removes devtools bar
     },
   frame: false
 
@@ -46,6 +46,10 @@ ipcMain.on('display-app-menu', (event, arg) => {
   if (mainWindow) {
     appMenu.popup(mainWindow, arg.x, arg.y)
   }
+})
+
+ipcMain.handle('getOperatingSystem', () => {
+  return process.platform
 })
 
 // Quit when all windows are closed.

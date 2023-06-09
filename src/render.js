@@ -4,12 +4,17 @@ const { writeFile } = require('fs');
 
 const { dialog, Menu } = remote;
 
+const RecordRTC = require('recordrtc')
+
+const { spawn } =  require('child_process');
+const record = require('node-record-lpcm16');
+
 // const {shell} = require('electron') // deconstructing assignment
 // shell.showItemInFolder('filepath') // Show the given file in a file manager. If possible, select the file.
 // shell.openPath('folderpath') // pen the given file in the desktop's default manner.
 // global state
 let mediaRecorder; // mediarecorder instance to capture footage
-const recordedChunks = [];
+let recordedChunks = [];
 
 const {
   getCurrentWindow,
@@ -107,14 +112,12 @@ async function getVideoSources() {
 
   videoOptionsMenu.popup();
 }
-
 // Change the videoSource window to record
 async function selectSource(source) {
 
   videoSelectBtn.innerText = source.name;
 
   const constraints = {
-    audio: false,
     video: {
       mandatory: {
         chromeMediaSource: 'desktop',
@@ -167,4 +170,102 @@ async function handleStop(e) {
     writeFile(filePath, buffer, () => console.log("you've saved a video!"));
   }
 
+}
+
+// function handleStream(stream) {
+//     navigator.mediaDevices.getUserMedia({audio: true, video: false}).then(function(mediaStream){
+//       var audioTracks = mediaStream.getAudioTracks();
+//       //add video and audio sound
+//       var medias = $("audio,video");
+//       for (var i = 0; i < medias.length; i++) {
+//         var tmpStream = medias[i].captureStream();  // mainWindow = new BrowserWindow({webPreferences: {experimentalFeatures: true} })
+//         if(tmpStream) {
+//           var tmpTrack = tmpStream.getAudioTracks()[0];
+//           audioTracks.push(tmpTrack);
+//         }
+//       }
+
+//       // mix audio tracks
+//       if(audioTracks.length > 0){
+//         var mixAudioTrack = mixTracks(audioTracks);
+//         stream.addTrack(mixAudioTrack);
+//       }
+
+//       stream.addTrack(audioTrack);
+//       recorder = new MediaRecorder(stream);
+//       recorder.ondataavailable = function(event) {
+//         // deal with your stream
+//       };
+//       recorder.start(1000);
+//     }).catch(function(err) {
+//       //console.log("handle stream error");
+//     })
+// }
+
+//   function mixTracks(tracks) {
+//     var ac = new AudioContext();
+//     var dest = ac.createMediaStreamDestination();
+//     for(var i=0;i<tracks.length;i++) {
+//       const source = ac.createMediaStreamSource(new MediaStream([tracks[i]]));
+//       source.connect(dest);
+//     }
+//     return dest.stream.getTracks()[0];
+//   }
+
+async function startRecording() {
+  const screenId = selectMenu.options[selectMenu.selectedIndex].value
+  
+  // AUDIO WONT WORK ON MACOS
+  const IS_MACOS = await ipcRenderer.invoke("getOperatingSystem") === 'darwin'
+  console.log(await ipcRenderer.invoke('getOperatingSystem'))
+  const audio = !IS_MACOS ? {
+    mandatory: {
+      chromeMediaSource: 'desktop'
+    }
+  } : true
+
+  const constraints = {
+    video: {
+      mandatory: {
+        chromeMediaSource: 'desktop'
+      }
+    }
+  };
+
+  // // Create a Stream
+  // const stream = await navigator.mediaDevices
+  //   .getUserMedia(constraints);
+    
+
+  // // Preview the source in a video element
+  // videoElement.srcObject = stream;
+  // await videoElement.play();
+
+  mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+  mediaRecorder.ondataavailable = onDataAvailable;
+  mediaRecorder.onstop = stopRecording;
+  mediaRecorder.start();
+}
+
+function onDataAvailable(e) {
+  recordedChunks.push(e.data);
+}
+
+
+async function stopRecording() {
+  videoElement.srcObject = null
+
+  const blob = new Blob(recordedChunks, {
+    type: 'video/webm; codecs=vp9'
+  });
+
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  recordedChunks = []
+
+  const { canceled, filePath } =  await ipcRenderer.invoke('showSaveDialog')
+  if(canceled) return
+
+  if (filePath) {
+    writeFile(filePath, buffer, () => console.log('video saved successfully!'));
+  }
 }
